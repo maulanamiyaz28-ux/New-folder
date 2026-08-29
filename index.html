@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NovaOS 3.0 Quantum Edition</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪐</text></svg>">
+</head>
+<body>
+
+    <!-- OS Boot Splash Screen -->
+    <div id="boot-screen">
+        <div class="boot-logo-wrap">
+            <div class="boot-logo-icon">🪐</div>
+            <div class="boot-logo-title">NovaOS</div>
+            <div class="boot-logo-sub">Quantum Edition 3.0</div>
+        </div>
+        <div class="boot-progress-bar">
+            <div class="boot-progress-fill"></div>
+        </div>
+    </div>
+
+    <!-- Desktop Area -->
+    <div id="desktop-area">
+        <!-- Desktop App Icons Grid -->
+        <div id="desktop-icons-container">
+            <div class="desktop-icon" data-app="terminal">
+                <div class="desktop-icon-symbol">💻</div>
+                <div class="desktop-icon-label">Terminal</div>
+            </div>
+            <div class="desktop-icon" data-app="store">
+                <div class="desktop-icon-symbol">🛍️</div>
+                <div class="desktop-icon-label">NovaStore</div>
+            </div>
+            <div class="desktop-icon" data-app="files">
+                <div class="desktop-icon-symbol">📁</div>
+                <div class="desktop-icon-label">Files</div>
+            </div>
+            <div class="desktop-icon" data-app="editor">
+                <div class="desktop-icon-symbol">📝</div>
+                <div class="desktop-icon-label">NovaCode</div>
+            </div>
+            <div class="desktop-icon" data-app="browser">
+                <div class="desktop-icon-symbol">🌐</div>
+                <div class="desktop-icon-label">Browser</div>
+            </div>
+            <div class="desktop-icon" data-app="taskmgr">
+                <div class="desktop-icon-symbol">📊</div>
+                <div class="desktop-icon-label">Task Mgr</div>
+            </div>
+            <div class="desktop-icon" data-app="settings">
+                <div class="desktop-icon-symbol">⚙️</div>
+                <div class="desktop-icon-label">Settings</div>
+            </div>
+            <div class="desktop-icon" data-app="calc">
+                <div class="desktop-icon-symbol">🧮</div>
+                <div class="desktop-icon-label">Calculator</div>
+            </div>
+            <div class="desktop-icon" data-app="games">
+                <div class="desktop-icon-symbol">🎮</div>
+                <div class="desktop-icon-label">Arcade Hub</div>
+            </div>
+            <div class="desktop-icon" data-app="music">
+                <div class="desktop-icon-symbol">🎵</div>
+                <div class="desktop-icon-label">NovaSynth</div>
+            </div>
+            <div class="desktop-icon" data-app="cpusim">
+                <div class="desktop-icon-symbol">🔬</div>
+                <div class="desktop-icon-label">CPU Sandbox</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Menu Flyout -->
+    <div id="start-menu">
+        <input type="text" id="start-search-input" class="start-search-box" placeholder="Search applications, files, settings..." spellcheck="false" autocomplete="off" />
+        <div class="start-apps-title">Pinned Applications</div>
+        <div class="start-apps-grid" id="start-apps-grid">
+            <div class="start-app-item" data-app-name="NovaStore App Hub" data-app="store">
+                <div class="start-app-icon">🛍️</div>
+                <div class="start-app-name">NovaStore</div>
+            </div>
+            <div class="start-app-item" data-app-name="Terminal" data-app="terminal">
+                <div class="start-app-icon">💻</div>
+                <div class="start-app-name">NovaCLI</div>
+            </div>
+            <div class="start-app-item" data-app-name="File Explorer" data-app="files">
+                <div class="start-app-icon">📁</div>
+                <div class="start-app-name">Files</div>
+            </div>
+            <div class="start-app-item" data-app-name="NovaCode Editor" data-app="editor">
+                <div class="start-app-icon">📝</div>
+                <div class="start-app-name">NovaCode</div>
+            </div>
+            <div class="start-app-item" data-app-name="Web Browser" data-app="browser">
+                <div class="start-app-icon">🌐</div>
+                <div class="start-app-name">Web Browser</div>
+            </div>
+            <div class="start-app-item" data-app-name="Task Manager" data-app="taskmgr">
+                <div class="start-app-icon">📊</div>
+                <div class="start-app-name">Task Manager</div>
+            </div>
+            <div class="start-app-item" data-app-name="Settings Control Center" data-app="settings">
+                <div class="start-app-icon">⚙️</div>
+                <div class="start-app-name">Settings</div>
+            </div>
+            <div class="start-app-item" data-app-name="Scientific Calculator" data-app="calc">
+                <div class="start-app-icon">🧮</div>
+                <div class="start-app-name">Calculator</div>
+            </div>
+            <div class="start-app-item" data-app-name="Arcade Games" data-app="games">
+                <div class="start-app-icon">🎮</div>
+                <div class="start-app-name">Arcade Hub</div>
+            </div>
+            <div class="start-app-item" data-app-name="NovaSynth Music" data-app="music">
+                <div class="start-app-icon">🎵</div>
+                <div class="start-app-name">NovaSynth</div>
+            </div>
+            <div class="start-app-item" data-app-name="x86 CPU Sandbox" data-app="cpusim">
+                <div class="start-app-icon">🔬</div>
+                <div class="start-app-name">CPU Sandbox</div>
+            </div>
+        </div>
+        <div class="start-footer">
+            <div class="start-user-profile">
+                <div class="start-avatar">👤</div>
+                <div class="start-username">user@novaos</div>
+            </div>
+            <button class="start-power-btn" id="start-restart-btn" title="Restart NovaOS">⟳ Restart</button>
+        </div>
+    </div>
+
+    <!-- Quick Settings Flyout -->
+    <div id="quick-settings-panel">
+        <div class="qs-toggles-grid">
+            <div class="qs-toggle-tile" id="qs-fullscreen-btn">
+                <span>⛶</span> <span class="qs-toggle-label">Fullscreen</span>
+            </div>
+            <div class="qs-toggle-tile active" id="qs-wifi-btn">
+                <span>📶</span> <span>Connected</span>
+            </div>
+            <div class="qs-toggle-tile active" id="qs-audio-btn">
+                <span>🔊</span> <span>Audio DSP</span>
+            </div>
+            <div class="qs-toggle-tile" id="qs-theme-btn">
+                <span>🌓</span> <span>Dark Mode</span>
+            </div>
+            <div class="qs-toggle-tile" id="qs-perf-btn">
+                <span>⚡</span> <span>Turbo Core</span>
+            </div>
+        </div>
+        <div class="qs-slider-group">
+            <div class="qs-slider-row">
+                <span>🔊</span>
+                <input type="range" id="qs-volume" min="0" max="1" step="0.05" value="0.6" />
+            </div>
+            <div class="qs-slider-row">
+                <span>☀️</span>
+                <input type="range" id="qs-brightness" min="0.4" max="1" step="0.05" value="1" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications Container -->
+    <div id="notifications-container"></div>
+
+    <!-- Taskbar -->
+    <div id="taskbar">
+        <div class="taskbar-left">
+            <button class="start-btn" id="start-button">
+                <span class="start-logo-icon">🪐</span>
+                <span>Nova</span>
+            </button>
+            <div class="taskbar-apps" id="taskbar-apps"></div>
+        </div>
+        <div class="taskbar-right">
+            <button class="tray-btn" id="tray-fullscreen-btn" title="Toggle Fullscreen (F11)">
+                <span>⛶</span>
+            </button>
+            <div class="tray-btn" id="system-tray-btn">
+                <span>📶</span>
+                <span>🔊</span>
+                <span>🔋 100%</span>
+            </div>
+            <div class="tray-clock-block" id="tray-clock-btn">
+                <span class="tray-clock" id="tray-clock">12:00</span>
+                <span class="tray-date" id="tray-date">Aug 23</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Scripts -->
+    <script src="kernel.js"></script>
+    <script src="window_manager.js"></script>
+    <script src="apps.js"></script>
+
+    <!-- Bootstrap Initialization Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize Window Manager
+            window.wm = new WindowManager(window.kernel);
+
+            // Restore saved theme and wallpaper
+            const savedTheme = localStorage.getItem('novaos_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+
+            const savedWp = localStorage.getItem('novaos_wallpaper');
+            if (savedWp) {
+                document.body.style.background = savedWp;
+            }
+
+            // Desktop Icons Double Click to Open
+            document.querySelectorAll('.desktop-icon').forEach(icon => {
+                icon.addEventListener('dblclick', () => {
+                    const app = icon.dataset.app;
+                    AppLauncher.open(app);
+                });
+                // Single click for touch / mobile support
+                let lastTouch = 0;
+                icon.addEventListener('touchend', (e) => {
+                    const now = Date.now();
+                    if (now - lastTouch < 300) {
+                        AppLauncher.open(icon.dataset.app);
+                    }
+                    lastTouch = now;
+                });
+            });
+
+            // Start Menu App Clicks
+            document.querySelectorAll('.start-app-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const app = item.dataset.app;
+                    AppLauncher.open(app);
+                    window.wm.closeStartMenu();
+                });
+            });
+
+            // Start Search Filter
+            const searchInput = document.getElementById('start-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    window.wm.filterStartApps(e.target.value);
+                });
+            }
+
+            // Restart Button
+            const restartBtn = document.getElementById('start-restart-btn');
+            if (restartBtn) {
+                restartBtn.addEventListener('click', () => window.location.reload());
+            }
+
+            // Quick Settings Brightness & Volume
+            const brightnessSlider = document.getElementById('qs-brightness');
+            if (brightnessSlider) {
+                brightnessSlider.addEventListener('input', () => {
+                    document.body.style.filter = `brightness(${brightnessSlider.value})`;
+                });
+            }
+
+            const volumeSlider = document.getElementById('qs-volume');
+            if (volumeSlider) {
+                volumeSlider.addEventListener('input', () => {
+                    window.kernel.audio.volume = parseFloat(volumeSlider.value);
+                });
+            }
+
+            const qsThemeBtn = document.getElementById('qs-theme-btn');
+            if (qsThemeBtn) {
+                qsThemeBtn.addEventListener('click', () => {
+                    const curr = document.documentElement.getAttribute('data-theme');
+                    const next = curr === 'dark' ? 'glass' : (curr === 'glass' ? 'cyber' : 'dark');
+                    SettingsApp.applyTheme(next);
+                    window.wm.notify('Theme Changed', `Switched to ${next}`, '🎨', 'info');
+                });
+            }
+
+            // Boot Sequence Finish
+            setTimeout(() => {
+                const bootScreen = document.getElementById('boot-screen');
+                if (bootScreen) {
+                    bootScreen.classList.add('fade-out');
+                    setTimeout(() => bootScreen.remove(), 500);
+                }
+                window.kernel.audio.playStartup();
+                window.wm.notify('Welcome to NovaOS', 'NovaOS 3.0 Quantum Edition initialized successfully.', '🪐', 'info', 5000);
+
+                // Open Welcome Terminal and File Explorer automatically
+                setTimeout(() => {
+                    AppLauncher.open('terminal');
+                }, 300);
+            }, 1800);
+        });
+    </script>
+</body>
+</html>
