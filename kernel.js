@@ -512,17 +512,74 @@ class ProcessScheduler {
 
 class NovaKernel {
     constructor() {
-        this.version = '3.1.0-Quantum';
-        this.build = '2026.08';
+        this.version = '3.2.0-Miyaz';
+        this.build = '2026.10';
         this.bootTime = Date.now();
         this.events = new KernelEventBus();
         this.audio = new AudioEngine();
         this.vfs = new VirtualFileSystem();
         this.scheduler = new ProcessScheduler(this);
-        this.user = 'user';
-        this.hostname = 'novaos-core';
+        this.hostname = 'nova-os-miyaz';
 
-        console.log(`[NovaOS Kernel] Initialized v${this.version} (${this.build})`);
+        // Load or initialize User Profile (Defaults to Profile 9: Miyaz Sovereign 9)
+        this.profile = this.loadProfile();
+        this.user = this.profile.username || 'miyaz';
+
+        console.log(`[nova-os-miyaz Kernel] Initialized v${this.version} (${this.build}) - User: ${this.user} (${this.profile.name})`);
+    }
+
+    loadProfile() {
+        const defaultProfile = {
+            id: 'UID-0009',
+            name: 'Miyaz Sovereign 9',
+            username: 'miyaz',
+            avatar: '👑',
+            role: 'System Administrator (nova-os-miyaz)',
+            bio: 'Creator & Administrator of nova-os-miyaz 🚀',
+            status: 'Active • Online',
+            created: '2026.10',
+            theme: 'dark'
+        };
+
+        try {
+            const saved = localStorage.getItem('novaos_profile');
+            if (saved) {
+                return { ...defaultProfile, ...JSON.parse(saved) };
+            }
+        } catch (e) {
+            console.error('[Kernel] Failed to parse profile from localStorage', e);
+        }
+        return defaultProfile;
+    }
+
+    saveProfile(newFields) {
+        this.profile = { ...this.profile, ...newFields };
+        if (newFields.username) {
+            const sanitizedUser = newFields.username.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'user9';
+            this.profile.username = sanitizedUser;
+            this.user = sanitizedUser;
+        }
+        try {
+            localStorage.setItem('novaos_profile', JSON.stringify(this.profile));
+        } catch (e) {
+            console.error('[Kernel] Failed to save profile to localStorage', e);
+        }
+
+        this.events.emit('profile:updated', this.profile);
+        this.syncProfileUI();
+        return this.profile;
+    }
+
+    syncProfileUI() {
+        const startNameEl = document.querySelector('.start-username');
+        const startAvatarEl = document.querySelector('.start-avatar');
+        if (startNameEl) {
+            startNameEl.textContent = `${this.profile.username}@novaos`;
+            startNameEl.title = `${this.profile.name} • ${this.profile.role}`;
+        }
+        if (startAvatarEl) {
+            startAvatarEl.textContent = this.profile.avatar || '👤';
+        }
     }
 
     getUptime() {
@@ -536,3 +593,4 @@ class NovaKernel {
 
 // Global Kernel Instance
 window.kernel = new NovaKernel();
+

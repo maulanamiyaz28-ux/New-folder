@@ -91,6 +91,15 @@ class TerminalApp {
         };
         updatePrompt();
 
+        const unbindProfileListener = km.events.on('profile:updated', () => {
+            updatePrompt();
+        });
+        const origOnClose = win.onClose;
+        win.onClose = () => {
+            unbindProfileListener();
+            if (typeof origOnClose === 'function') origOnClose();
+        };
+
         const print = (text, className = '') => {
             const line = document.createElement('div');
             line.className = 'terminal-line ' + className;
@@ -100,7 +109,7 @@ class TerminalApp {
         };
 
         // Welcome banner
-        print(`<span style="color:#38bdf8; font-weight:bold;">NovaOS Terminal (v3.1.0-Quantum)</span>`);
+        print(`<span style="color:#38bdf8; font-weight:bold;">nova-os-miyaz Terminal (v3.2.0-Miyaz)</span>`);
         print(`Type <span style="color:#facc15; font-weight:bold;">help</span> for a list of available commands, or <span style="color:#a855f7; font-weight:bold;">neofetch</span> for system information.\n`);
 
         const execCommand = async (cmdLine) => {
@@ -153,7 +162,8 @@ class TerminalApp {
   <span style="color:#facc15;">pkg [list|install]</span> Package Manager & NovaStore CLI
   <span style="color:#facc15;">code / nano &lt;file&gt;</span> Open file in NovaCode editor
   <span style="color:#facc15;">date / time</span>        Show system date and time
-  <span style="color:#facc15;">whoami</span>             Print current user
+  <span style="color:#facc15;">whoami</span>             Print current user identity
+  <span style="color:#facc15;">profile [set|avatar]</span> View or configure user profile identity
   <span style="color:#facc15;">clear</span>              Clear terminal screen
   <span style="color:#facc15;">reboot</span>             Reboot NovaOS
                     `;
@@ -285,11 +295,13 @@ class TerminalApp {
                 case 'neofetch':
                 case 'fetch':
                     cmdOutput = `
-<span style="color:#38bdf8;">       /\_/\        </span> <span style="color:#38bdf8; font-weight:bold;">${km.user}</span>@<span style="color:#38bdf8; font-weight:bold;">${km.hostname}</span>
+<span style="color:#38bdf8;">       /\\_/\\        </span> <span style="color:#38bdf8; font-weight:bold;">${km.profile?.name || km.user}</span>@<span style="color:#38bdf8; font-weight:bold;">${km.hostname}</span>
 <span style="color:#38bdf8;">      ( o.o )       </span> -------------------------
 <span style="color:#38bdf8;">       &gt; ^ &lt;        </span> <span style="color:#facc15; font-weight:bold;">OS:</span> NovaOS 3.0 Quantum Edition x86_64
 <span style="color:#818cf8;">      /     \\       </span> <span style="color:#facc15; font-weight:bold;">Kernel:</span> ${km.version}
 <span style="color:#818cf8;">     (_______)      </span> <span style="color:#facc15; font-weight:bold;">Uptime:</span> ${km.getUptime()}
+<span style="color:#c084fc;">                    </span> <span style="color:#facc15; font-weight:bold;">Profile:</span> ${km.profile?.name || 'Nova Sovereign 9'} (${km.profile?.avatar || '👑'})
+<span style="color:#c084fc;">                    </span> <span style="color:#facc15; font-weight:bold;">Role:</span> ${km.profile?.role || 'System Administrator'}
 <span style="color:#c084fc;">                    </span> <span style="color:#facc15; font-weight:bold;">Shell:</span> NovaCLI 2.4
 <span style="color:#c084fc;">                    </span> <span style="color:#facc15; font-weight:bold;">Resolution:</span> ${window.innerWidth}x${window.innerHeight}
 <span style="color:#f472b6;">                    </span> <span style="color:#facc15; font-weight:bold;">Memory:</span> ${km.scheduler.getTotalMem()} MB / 4096 MB
@@ -461,8 +473,35 @@ class TerminalApp {
                     break;
 
                 case 'whoami':
-                    cmdOutput = km.user;
+                    cmdOutput = `<span style="color:#38bdf8; font-weight:bold;">${km.user}</span> (${km.profile?.name || 'Nova Sovereign 9'}) [${km.profile?.role || 'Administrator'}]`;
                     break;
+
+                case 'profile': {
+                    if (args[0] === 'set' && args[1]) {
+                        const newName = args.slice(1).join(' ');
+                        km.saveProfile({ name: newName });
+                        cmdOutput = `<span style="color:#4ade80;">Profile display name updated to: ${escapeHtml(newName)}</span>`;
+                    } else if (args[0] === 'avatar' && args[1]) {
+                        km.saveProfile({ avatar: args[1] });
+                        cmdOutput = `<span style="color:#4ade80;">Profile avatar updated to: ${args[1]}</span>`;
+                    } else if (args[0] === 'gui' || args[0] === 'edit' || args[0] === 'settings') {
+                        AppLauncher.open('settings', { tab: 'profile' });
+                        cmdOutput = `<span style="color:#38bdf8;">Opening Profile Settings in Control Center...</span>`;
+                    } else {
+                        const p = km.profile;
+                        cmdOutput = `
+<span style="color:#38bdf8; font-weight:bold;">=== User Profile & Identity (NovaOS) ===</span>
+<span style="color:#facc15;">Avatar:</span>       ${p.avatar}
+<span style="color:#facc15;">Profile Name:</span> <span style="color:#ffffff; font-weight:bold;">${escapeHtml(p.name)}</span>
+<span style="color:#facc15;">Username:</span>     ${p.username}
+<span style="color:#facc15;">Role:</span>         ${p.role}
+<span style="color:#facc15;">Status:</span>       ${p.status}
+<span style="color:#facc15;">Bio:</span>          "${escapeHtml(p.bio)}"
+<span style="color:#facc15;">Account ID:</span>   ${p.id || 'UID-0009'}
+<span style="color:#94a3b8; font-size:11px;">Tip: Customize in Settings &gt; User Profile or run 'profile set &lt;name&gt;' / 'profile gui'</span>`;
+                    }
+                    break;
+                }
 
                 case 'clear':
                     outputEl.innerHTML = '';
@@ -1429,23 +1468,268 @@ class TaskManagerApp {
    ========================================================================= */
 class SettingsApp {
     static launch(wm, km, params = {}) {
-        const defaultTab = params.tab || 'appearance';
+        const defaultTab = params.tab || 'profile';
+
+        const PRESET_PROFILES = [
+            {
+                id: 1,
+                label: 'Profile 1',
+                name: 'Nova User 1',
+                username: 'user1',
+                avatar: '👤',
+                badge: 'LVL 1',
+                role: 'Standard User',
+                status: 'Active • Online',
+                bio: 'Standard desktop user exploring NovaOS apps and tools.'
+            },
+            {
+                id: 2,
+                label: 'Profile 2',
+                name: 'Astro Pilot 9',
+                username: 'voyager9',
+                avatar: '🚀',
+                badge: 'LVL 2',
+                role: 'Space Fleet Commander',
+                status: 'In Quantum Simulation 🪐',
+                bio: 'Navigating deep space constellations and cosmic data matrices.'
+            },
+            {
+                id: 3,
+                label: 'Profile 3',
+                name: 'Cyber Phantom',
+                username: 'root_phantom',
+                avatar: '👩‍💻',
+                badge: 'LVL 3',
+                role: 'Cyber Security Specialist',
+                status: 'Turbo Mode • Overclocked ⚡',
+                bio: 'Auditing microkernel security protocols and network sockets.'
+            },
+            {
+                id: 4,
+                label: 'Profile 4',
+                name: 'Quantum Coder',
+                username: 'dev_quantum',
+                avatar: '👨‍💻',
+                badge: 'LVL 4',
+                role: 'Lead Software Engineer',
+                status: 'Coding in NovaCode 💻',
+                bio: 'Architecting high-performance WebAssembly and x86 simulations.'
+            },
+            {
+                id: 5,
+                label: 'Profile 5',
+                name: 'AI Sentinel Core',
+                username: 'sentinel_ai',
+                avatar: '🤖',
+                badge: 'LVL 5',
+                role: 'Quantum Research Scientist',
+                status: 'Active • Online',
+                bio: 'Autonomous neural subroutines running on NovaOS Microkernel.'
+            },
+            {
+                id: 6,
+                label: 'Profile 6',
+                name: 'Cosmic Voyager',
+                username: 'orbit_master',
+                avatar: '🪐',
+                badge: 'LVL 6',
+                role: 'Quantum Research Scientist',
+                status: 'In Quantum Simulation 🪐',
+                bio: 'Analyzing celestial orbits and cosmic radiation metrics.'
+            },
+            {
+                id: 7,
+                label: 'Profile 7',
+                name: 'Kitsune Neon',
+                username: 'kitsune_ux',
+                avatar: '🦊',
+                badge: 'LVL 7',
+                role: 'UI/UX Creative Architect',
+                status: 'Active • Online',
+                bio: 'Crafting vibrant glassmorphism design tokens and futuristic themes.'
+            },
+            {
+                id: 8,
+                label: 'Profile 8',
+                name: 'Volt Accelerator',
+                username: 'spark_overdrive',
+                avatar: '⚡',
+                badge: 'LVL 8',
+                role: 'Lead Software Engineer',
+                status: 'Turbo Mode • Overclocked ⚡',
+                bio: 'Overclocking CPU tick loops and synthesizing 32-bit audio DSP.'
+            },
+            {
+                id: 9,
+                label: 'Profile 9',
+                name: 'Miyaz Sovereign 9',
+                username: 'miyaz',
+                avatar: '👑',
+                badge: 'LVL 9',
+                role: 'System Administrator (nova-os-miyaz)',
+                status: 'Active • Online',
+                bio: 'Supreme Creator & Administrator of nova-os-miyaz 👑'
+            }
+        ];
+
+        const AVATAR_PRESETS = [
+            { icon: '👤', label: 'Classic User', badge: 'LVL 1' },
+            { icon: '🚀', label: 'Astro Pilot', badge: 'LVL 2' },
+            { icon: '👩‍💻', label: 'Cyber Hacker', badge: 'LVL 3' },
+            { icon: '👨‍💻', label: 'Quantum Dev', badge: 'LVL 4' },
+            { icon: '🤖', label: 'AI Sentinel', badge: 'LVL 5' },
+            { icon: '🪐', label: 'Cosmic Voyager', badge: 'LVL 6' },
+            { icon: '🦊', label: 'Neon Fox', badge: 'LVL 7' },
+            { icon: '⚡', label: 'Hyper Spark', badge: 'LVL 8' },
+            { icon: '👑', label: 'Profile 9 Sovereign', badge: 'LVL 9' }
+        ];
+
+        const currentProfile = km.profile || {
+            name: 'Miyaz Sovereign 9',
+            username: 'miyaz',
+            avatar: '👑',
+            role: 'System Administrator (nova-os-miyaz)',
+            status: 'Active • Online',
+            bio: 'Supreme Creator & Administrator of nova-os-miyaz 👑',
+            id: 'UID-0009'
+        };
 
         const win = wm.createWindow({
             id: 'app_settings',
             title: 'Control Center & Settings',
             icon: '⚙️',
-            width: 740,
-            height: 500,
+            width: 780,
+            height: 560,
             content: `
                 <div class="settings-app">
                     <div class="settings-sidebar">
+                        <div class="settings-nav-item ${defaultTab === 'profile' ? 'active' : ''}" data-tab="profile">👤 User Profile</div>
                         <div class="settings-nav-item ${defaultTab === 'appearance' ? 'active' : ''}" data-tab="appearance">🎨 Appearance</div>
                         <div class="settings-nav-item ${defaultTab === 'wallpaper' ? 'active' : ''}" data-tab="wallpaper">🖼 Wallpaper</div>
                         <div class="settings-nav-item ${defaultTab === 'audio' ? 'active' : ''}" data-tab="audio">🔊 Audio & Sound</div>
                         <div class="settings-nav-item ${defaultTab === 'system' ? 'active' : ''}" data-tab="system">ℹ️ System Info</div>
                     </div>
                     <div class="settings-content">
+                        <!-- User Profile Tab -->
+                        <div class="settings-tab-pane ${defaultTab === 'profile' ? 'active' : ''}" id="stab-profile">
+                            <div class="profile-settings-header">
+                                <h3>User Profile & Identity Center</h3>
+                                <p class="settings-subtitle">Manage your account identity, profile name, persona presets 1-9, avatar, and system roles.</p>
+                            </div>
+
+                            <!-- Live Profile Hero Card Preview -->
+                            <div class="profile-hero-card">
+                                <div class="profile-avatar-wrapper">
+                                    <div class="profile-hero-avatar" id="prof-preview-avatar">${currentProfile.avatar || '👑'}</div>
+                                    <div class="profile-avatar-badge" id="prof-preview-badge">LVL 9</div>
+                                </div>
+                                <div class="profile-hero-info">
+                                    <div class="profile-hero-name-row">
+                                        <span class="profile-hero-name" id="prof-preview-name">${currentProfile.name || 'Nova Sovereign 9'}</span>
+                                        <span class="profile-verified-badge" title="Verified Identity">✓</span>
+                                        <span class="profile-status-chip" id="prof-preview-status">${currentProfile.status || 'Active • Online'}</span>
+                                    </div>
+                                    <div class="profile-hero-handle-row">
+                                        <span class="profile-hero-handle" id="prof-preview-handle">@${currentProfile.username || 'user9'}</span>
+                                        <span class="profile-dot">•</span>
+                                        <span class="profile-hero-role" id="prof-preview-role">${currentProfile.role || 'System Administrator (Level 9)'}</span>
+                                        <span class="profile-dot">•</span>
+                                        <span class="profile-hero-id">${currentProfile.id || 'UID-0009'}</span>
+                                    </div>
+                                    <div class="profile-hero-bio" id="prof-preview-bio">"${currentProfile.bio || 'Supreme Administrator of NovaOS 3.0 Quantum Edition 👑'}"</div>
+                                </div>
+                            </div>
+
+                            <!-- 9 Quick Persona Presets -->
+                            <div class="profile-section-title">
+                                <span>⚡ Quick Profile Presets (Personas 1 to 9)</span>
+                                <span class="profile-section-hint">Click to instant-load persona attributes</span>
+                            </div>
+                            <div class="profile-presets-grid" id="profile-presets-grid">
+                                ${PRESET_PROFILES.map(p => `
+                                    <div class="profile-preset-card ${p.username === currentProfile.username ? 'active' : ''}" data-preset-id="${p.id}">
+                                        <span class="preset-avatar">${p.avatar}</span>
+                                        <div class="preset-meta">
+                                            <span class="preset-name">${p.name}</span>
+                                            <span class="preset-sub">@${p.username} • ${p.badge}</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <!-- Form Editor -->
+                            <div class="profile-section-title" style="margin-top:16px;">
+                                <span>📝 Edit Profile Details</span>
+                            </div>
+                            <div class="profile-form-grid">
+                                <div class="profile-form-group">
+                                    <label for="prof-input-name">Display Name (Profile Name):</label>
+                                    <input type="text" id="prof-input-name" class="profile-form-input" value="${currentProfile.name || 'Nova Sovereign 9'}" placeholder="e.g. Profile Name 9, Alex, etc." />
+                                </div>
+                                <div class="profile-form-group">
+                                    <label for="prof-input-username">System Handle / Username:</label>
+                                    <div class="profile-handle-input-wrap">
+                                        <span class="profile-handle-prefix">@</span>
+                                        <input type="text" id="prof-input-username" class="profile-form-input" value="${currentProfile.username || 'user9'}" placeholder="username" />
+                                    </div>
+                                </div>
+                                <div class="profile-form-group">
+                                    <label for="prof-select-role">User Role & Privileges:</label>
+                                    <select id="prof-select-role" class="profile-form-select">
+                                        <option value="System Administrator (Level 9)" ${currentProfile.role && currentProfile.role.includes('Level 9') ? 'selected' : ''}>👑 System Administrator (Level 9)</option>
+                                        <option value="Lead Software Engineer" ${currentProfile.role && currentProfile.role.includes('Lead') ? 'selected' : ''}>💻 Lead Software Engineer</option>
+                                        <option value="Cyber Security Specialist" ${currentProfile.role && currentProfile.role.includes('Security') ? 'selected' : ''}>🛡️ Cyber Security Specialist</option>
+                                        <option value="Quantum Research Scientist" ${currentProfile.role && currentProfile.role.includes('Research') ? 'selected' : ''}>🔬 Quantum Research Scientist</option>
+                                        <option value="UI/UX Creative Architect" ${currentProfile.role && currentProfile.role.includes('Architect') ? 'selected' : ''}>🎨 UI/UX Creative Architect</option>
+                                        <option value="Space Fleet Commander" ${currentProfile.role && currentProfile.role.includes('Fleet') ? 'selected' : ''}>🚀 Space Fleet Commander</option>
+                                        <option value="Standard User" ${currentProfile.role === 'Standard User' ? 'selected' : ''}>👤 Standard User</option>
+                                    </select>
+                                </div>
+                                <div class="profile-form-group">
+                                    <label for="prof-select-status">Current Status:</label>
+                                    <select id="prof-select-status" class="profile-form-select">
+                                        <option value="Active • Online" ${currentProfile.status === 'Active • Online' ? 'selected' : ''}>🟢 Active • Online</option>
+                                        <option value="Turbo Mode • Overclocked ⚡" ${currentProfile.status && currentProfile.status.includes('Turbo') ? 'selected' : ''}>⚡ Turbo Mode • Overclocked</option>
+                                        <option value="Coding in NovaCode 💻" ${currentProfile.status && currentProfile.status.includes('NovaCode') ? 'selected' : ''}>💻 Coding in NovaCode</option>
+                                        <option value="In Quantum Simulation 🪐" ${currentProfile.status && currentProfile.status.includes('Quantum') ? 'selected' : ''}>🪐 In Quantum Simulation</option>
+                                        <option value="Away • Hibernating 🌙" ${currentProfile.status && currentProfile.status.includes('Away') ? 'selected' : ''}>🌙 Away • Hibernating</option>
+                                        <option value="Do Not Disturb ⛔" ${currentProfile.status && currentProfile.status.includes('Disturb') ? 'selected' : ''}>⛔ Do Not Disturb</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 9 Avatar Preset Grid -->
+                            <div class="profile-section-title" style="margin-top:16px;">
+                                <span>🎭 Choose Avatar (9 Aesthetic Presets + Custom)</span>
+                            </div>
+                            <div class="profile-avatars-grid" id="profile-avatars-grid">
+                                ${AVATAR_PRESETS.map(av => `
+                                    <div class="profile-avatar-card ${av.icon === currentProfile.avatar ? 'active' : ''}" data-avatar="${av.icon}" data-badge="${av.badge}">
+                                        <span class="avatar-card-icon">${av.icon}</span>
+                                        <span class="avatar-card-label">${av.label}</span>
+                                        <span class="avatar-card-badge">${av.badge}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="profile-custom-avatar-row">
+                                <label for="prof-custom-avatar">Custom Avatar Emoji:</label>
+                                <input type="text" id="prof-custom-avatar" class="profile-custom-avatar-input" maxlength="4" placeholder="✨" value="${currentProfile.avatar || '👑'}" />
+                                <button class="fe-btn" id="prof-apply-custom-avatar">Apply Emoji</button>
+                            </div>
+
+                            <!-- Bio Input -->
+                            <div class="profile-form-group" style="margin-top:14px;">
+                                <label for="prof-input-bio">Personal Status Bio / Quotation:</label>
+                                <textarea id="prof-input-bio" class="profile-form-textarea" rows="2" placeholder="Write a short personal bio or status quote...">${currentProfile.bio || 'Supreme Administrator of NovaOS 3.0 Quantum Edition 👑'}</textarea>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="profile-actions-bar">
+                                <button class="tm-btn profile-save-btn" id="prof-save-btn">💾 Save Profile Changes</button>
+                                <button class="fe-btn" id="prof-reset-btn">🔄 Reset to Profile 9 Default</button>
+                            </div>
+                        </div>
+
                         <!-- Appearance Tab -->
                         <div class="settings-tab-pane ${defaultTab === 'appearance' ? 'active' : ''}" id="stab-appearance">
                             <h3>Theme & Color Scheme</h3>
@@ -1517,8 +1801,8 @@ class SettingsApp {
                         <!-- System Info Tab -->
                         <div class="settings-tab-pane ${defaultTab === 'system' ? 'active' : ''}" id="stab-system">
                             <h3>System Information</h3>
-                            <p><strong>OS Name:</strong> NovaOS Quantum Edition</p>
-                            <p><strong>Kernel:</strong> ${km.version}</p>
+                            <p><strong>OS Name:</strong> nova-os-miyaz (NovaOS Miyaz Edition)</p>
+                            <p><strong>Kernel:</strong> ${km.version} (${km.hostname})</p>
                             <p><strong>Host Browser:</strong> ${navigator.userAgent.slice(0, 60)}...</p>
                             <p><strong>Storage:</strong> LocalStorage Virtual File System</p>
                             <button class="tm-btn" id="vfs-factory-reset-btn" style="background:#ef4444; color:#fff; margin-top:18px;">⚠️ Factory Reset VFS Filesystem</button>
@@ -1534,9 +1818,163 @@ class SettingsApp {
                 win.body.querySelectorAll('.settings-nav-item').forEach(n => n.classList.remove('active'));
                 win.body.querySelectorAll('.settings-tab-pane').forEach(p => p.classList.remove('active'));
                 nav.classList.add('active');
-                win.body.querySelector(`#stab-${nav.dataset.tab}`).classList.add('active');
+                const targetPane = win.body.querySelector(`#stab-${nav.dataset.tab}`);
+                if (targetPane) targetPane.classList.add('active');
             });
         });
+
+        // --- Profile Management Logic ---
+        const nameInput = win.body.querySelector('#prof-input-name');
+        const usernameInput = win.body.querySelector('#prof-input-username');
+        const roleSelect = win.body.querySelector('#prof-select-role');
+        const statusSelect = win.body.querySelector('#prof-select-status');
+        const bioTextarea = win.body.querySelector('#prof-input-bio');
+        const customAvatarInput = win.body.querySelector('#prof-custom-avatar');
+        const applyCustomAvatarBtn = win.body.querySelector('#prof-apply-custom-avatar');
+        const saveProfileBtn = win.body.querySelector('#prof-save-btn');
+        const resetProfileBtn = win.body.querySelector('#prof-reset-btn');
+
+        const prevAvatar = win.body.querySelector('#prof-preview-avatar');
+        const prevBadge = win.body.querySelector('#prof-preview-badge');
+        const prevName = win.body.querySelector('#prof-preview-name');
+        const prevHandle = win.body.querySelector('#prof-preview-handle');
+        const prevRole = win.body.querySelector('#prof-preview-role');
+        const prevStatus = win.body.querySelector('#prof-preview-status');
+        const prevBio = win.body.querySelector('#prof-preview-bio');
+
+        let selectedAvatar = currentProfile.avatar || '👑';
+        let selectedBadge = 'LVL 9';
+
+        const updateLivePreview = () => {
+            if (prevAvatar) prevAvatar.textContent = selectedAvatar;
+            if (prevBadge) prevBadge.textContent = selectedBadge;
+            if (prevName) prevName.textContent = nameInput?.value.trim() || 'Nova Sovereign 9';
+            if (prevHandle) prevHandle.textContent = '@' + (usernameInput?.value.trim() || 'user9');
+            if (prevRole) prevRole.textContent = roleSelect?.value || 'System Administrator (Level 9)';
+            if (prevStatus) prevStatus.textContent = statusSelect?.value || 'Active • Online';
+            if (prevBio) prevBio.textContent = `"${bioTextarea?.value.trim() || 'Supreme Administrator of NovaOS 3.0 Quantum Edition 👑'}"`;
+        };
+
+        [nameInput, usernameInput, bioTextarea].forEach(input => {
+            if (input) input.addEventListener('input', updateLivePreview);
+        });
+
+        [roleSelect, statusSelect].forEach(select => {
+            if (select) select.addEventListener('change', updateLivePreview);
+        });
+
+        // Avatar Picker Cards
+        const avatarCards = win.body.querySelectorAll('.profile-avatar-card');
+        avatarCards.forEach(card => {
+            card.addEventListener('click', () => {
+                avatarCards.forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                selectedAvatar = card.dataset.avatar;
+                selectedBadge = card.dataset.badge || 'LVL 9';
+                if (customAvatarInput) customAvatarInput.value = selectedAvatar;
+                updateLivePreview();
+                km.audio.playTone(600, 0.05, 'sine', 0.1);
+            });
+        });
+
+        // Custom Avatar
+        if (applyCustomAvatarBtn && customAvatarInput) {
+            applyCustomAvatarBtn.addEventListener('click', () => {
+                const val = customAvatarInput.value.trim();
+                if (val) {
+                    selectedAvatar = val;
+                    selectedBadge = 'CUSTOM';
+                    avatarCards.forEach(c => c.classList.remove('active'));
+                    updateLivePreview();
+                    wm.notify('Avatar Applied', `Custom avatar emoji set to: ${val}`, val, 'info');
+                }
+            });
+        }
+
+        // Preset Persona Cards (Presets 1 to 9)
+        const presetCards = win.body.querySelectorAll('.profile-preset-card');
+        presetCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const pid = parseInt(card.dataset.presetId);
+                const preset = PRESET_PROFILES.find(p => p.id === pid);
+                if (!preset) return;
+
+                presetCards.forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+
+                if (nameInput) nameInput.value = preset.name;
+                if (usernameInput) usernameInput.value = preset.username;
+                if (roleSelect) roleSelect.value = preset.role;
+                if (statusSelect) statusSelect.value = preset.status;
+                if (bioTextarea) bioTextarea.value = preset.bio;
+                selectedAvatar = preset.avatar;
+                selectedBadge = preset.badge;
+                if (customAvatarInput) customAvatarInput.value = preset.avatar;
+
+                avatarCards.forEach(c => {
+                    c.classList.toggle('active', c.dataset.avatar === preset.avatar);
+                });
+
+                updateLivePreview();
+                km.audio.playTone(720, 0.08, 'triangle', 0.15);
+                wm.notify(`Preset Loaded: ${preset.label}`, `Switched persona to ${preset.name}`, preset.avatar, 'info');
+            });
+        });
+
+        // Save Profile
+        if (saveProfileBtn) {
+            saveProfileBtn.addEventListener('click', () => {
+                const newProfile = {
+                    name: nameInput?.value.trim() || 'Nova Sovereign 9',
+                    username: usernameInput?.value.trim() || 'user9',
+                    avatar: selectedAvatar || '👑',
+                    role: roleSelect?.value || 'System Administrator (Level 9)',
+                    status: statusSelect?.value || 'Active • Online',
+                    bio: bioTextarea?.value.trim() || 'Supreme Administrator of NovaOS 3.0 Quantum Edition 👑'
+                };
+
+                km.saveProfile(newProfile);
+                updateLivePreview();
+                km.audio.playStartup();
+                wm.notify('Profile Saved', `Profile "${newProfile.name}" updated successfully!`, newProfile.avatar, 'success');
+            });
+        }
+
+        // Reset Profile to Profile 9 Default
+        if (resetProfileBtn) {
+            resetProfileBtn.addEventListener('click', () => {
+                const p9 = PRESET_PROFILES.find(p => p.id === 9);
+                if (!p9) return;
+
+                if (nameInput) nameInput.value = p9.name;
+                if (usernameInput) usernameInput.value = p9.username;
+                if (roleSelect) roleSelect.value = p9.role;
+                if (statusSelect) statusSelect.value = p9.status;
+                if (bioTextarea) bioTextarea.value = p9.bio;
+                selectedAvatar = p9.avatar;
+                selectedBadge = p9.badge;
+                if (customAvatarInput) customAvatarInput.value = p9.avatar;
+
+                avatarCards.forEach(c => {
+                    c.classList.toggle('active', c.dataset.avatar === p9.avatar);
+                });
+                presetCards.forEach(c => {
+                    c.classList.toggle('active', parseInt(c.dataset.presetId) === 9);
+                });
+
+                km.saveProfile({
+                    name: p9.name,
+                    username: p9.username,
+                    avatar: p9.avatar,
+                    role: p9.role,
+                    status: p9.status,
+                    bio: p9.bio
+                });
+
+                updateLivePreview();
+                wm.notify('Profile Reset', 'Reset profile to Profile 9 (Nova Sovereign 9)', '👑', 'info');
+            });
+        }
 
         // Theme selection
         win.body.querySelectorAll('.theme-card').forEach(card => {

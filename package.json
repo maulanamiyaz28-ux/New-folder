@@ -1,0 +1,22 @@
+{
+  "name": "nova-os-miyaz",
+  "version": "3.2.0",
+  "description": "nova-os-miyaz - Ultra-responsive, zero-dependency browser Operating System with preemptive microkernel, Glassmorphic window compositing, and user profile personalization.",
+  "main": "index.html",
+  "homepage": "https://maulanamiyaz28-ux.github.io/New-folder/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maulanamiyaz28-ux/New-folder.git"
+  },
+  "keywords": [
+    "nova-os-miyaz",
+    "novaos",
+    "web-os",
+    "operating-system",
+    "browser-os",
+    "glassmorphism",
+    "javascript"
+  ],
+  "author": "maulanamiyaz28-ux (Miyaz)",
+  "license": "MIT"
+}
